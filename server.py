@@ -3,6 +3,7 @@
 import json
 import logging
 
+import boto3
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
@@ -54,6 +55,20 @@ def get_soup(url: str):
     return soup
 
 
+def game_clock_to_seconds(period, minutes, seconds):
+    return (period - 1) * 12 * 60 + (11 - minutes) * 60 + (60 - seconds)
+
+
+def seconds_passed(row):
+    if len(row['clock'].split(':')) == 2:
+        minutes, seconds = (int(x) for x in row['clock'].split(':'))
+    elif len(row['clock'].split(':')) == 1:
+        minutes = 0
+        seconds = int(row['clock'].split('.')[0])
+
+    return game_clock_to_seconds(row['period'], minutes, seconds)
+
+
 @app.route('/health', methods=["GET"])
 def health_check():
     return jsonify({"message": "Health Check OK"}), 200
@@ -93,6 +108,37 @@ def fetch_highlights():
     df['homeAway'] = df['homeAway'].fillna('neutral').astype('category')
     df['clock'] = df['clock'].apply(lambda x: x['displayValue']).astype(str)
     df['scoringPlay'] = df['scoringPlay'].fillna(False)
+    df['secondsPassed'] = df.apply(seconds_passed, axis=1)
+
+    primary_key_name = "game-id"
+    sort_key_name = "seconds"
+
+    period_name = "period"
+    text_name = "text"
+    home_away_name = "venue"
+    clock_name = "clock"
+    scoring_play_name = "scoring-play"
+
+    plays = []
+    for id, period, text, home_away, clock, scoring_play, second in zip(df.id, df.period, df.text, df.homeAway, df.clock, df.scoringPlay, df.secondsPassed):
+        dynamo_db_item = {
+            primary_key_name: id,
+            sort_key_name: second,
+            period_name: period,
+            text_name: text,
+            home_away_name: home_away,
+            clock_name: clock,
+            scoring_play_name: scoring_play
+        }
+        plays.append(dynamo_db_item)
+
+    table_name = "nba-play-by-play"
+    dynamodb = boto3.resource("dynamodb")
+    table = dynamodb.Table(table_name)
+
+    with table.batch_writer() as batch:
+        for play in plays:
+            response = batch.put_item(Item=play)
 
     return jsonify({'message': 'Hello from the endpoint'}), 200
 
