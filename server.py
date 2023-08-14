@@ -94,6 +94,8 @@ def fetch_highlights():
 
     app.logger.info(f"Fetching HTML for Game: {game_id}, from URL: {url}.")
     soup = get_soup(url)
+
+    app.logger.info(f"Parsing HTML for play by plays.")
     # A weird ass script tag that has all the data
     text = soup.find_all('script')[-5].text
     text = text.split('playGrps')[1].split('}]],')[0] + '}]]'
@@ -119,6 +121,7 @@ def fetch_highlights():
     clock_name = "clock"
     scoring_play_name = "scoring-play"
 
+    app.logger.info(f"Creating {df.shape[0]} items to be sent to Dynamo DB.")
     plays = []
     for id, period, text, home_away, clock, scoring_play, second in zip(df.id, df.period, df.text, df.homeAway, df.clock, df.scoringPlay, df.secondsPassed):
         dynamo_db_item = {
@@ -136,9 +139,13 @@ def fetch_highlights():
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(table_name)
 
+    app.logger.info(f"Sending {len(plays)} to DynamoDB.")
     with table.batch_writer() as batch:
         for play in plays:
-            response = batch.put_item(Item=play)
+            try:
+                response = batch.put_item(Item=play)
+            except Exception as e:
+                app.logger.warning(f"Could not send item {play} to DynamoDB table {table_name}.", exc_info=e)
 
     return jsonify({'message': 'Hello from the endpoint'}), 200
 
@@ -149,4 +156,4 @@ def hello_world():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=7000)
