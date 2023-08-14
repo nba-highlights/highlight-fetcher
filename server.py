@@ -156,8 +156,7 @@ def fetch_highlights():
     eventbridge_client = boto3.client('events', region_name='eu-north-1')
     event_data = {
         "game-id": game_id,
-        "num-plays": num_sent,
-        "time": datetime.UTC
+        "num-plays": num_sent
     }
     app.logger.info(f"Emitting event with data: {event_data}.")
     # PutEvents request to send the custom event
