@@ -2,15 +2,8 @@
 
 import json
 import logging
-import os
-from io import BytesIO
 
-import boto3
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-
-from pathlib import Path
-
+import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 from flask import Flask, request, jsonify
@@ -84,28 +77,22 @@ def fetch_highlights():
 
     url = f"https://www.espn.com/nba/playbyplay/_/gameId/{game_id}"
 
-    options = webdriver.ChromeOptions()
-    options.add_argument('--headless')
-    options.add_argument("window-size=1920,1080")
-    driver = webdriver.Chrome(options)
-    driver.get(url)
+    app.logger.info(f"Fetching HTML for Game: {game_id}, from URL: {url}.")
+    soup = get_soup(url)
+    # A weird ass script tag that has all the data
+    text = soup.find_all('script')[-5].text
+    text = text.split('playGrps')[1].split('}]],')[0] + '}]]'
+    data = json.loads(text[2:])
 
-    buttons = driver.find_elements(By.TAG_NAME, "button")
+    # flatten list
+    df = pd.DataFrame([item for sublist in data for item in sublist])
 
-    # Click Continue Without Accepting button to make visible the quarters
-    for button in buttons:
-        if button.accessible_name == "Continue without Accepting":
-            button.click()
-            break
-
-    buttons = driver.find_elements(By.TAG_NAME, "button")
-    quarter_buttons = list(filter(lambda button: button.text in ["1st", "2nd", "3rd", "4th"], buttons))
-
-    for quarter_button in quarter_buttons:
-        quarter_button.click()
-
-        soup = BeautifulSoup(driver.page_source, 'html.parser')
-        soup.find_all()
+    df['id'] = df['id'].astype(str)
+    df['period'] = df['period'].apply(lambda x: x['number'])
+    df['text'] = df['text'].fillna('').astype(str)
+    df['homeAway'] = df['homeAway'].fillna('neutral').astype('category')
+    df['clock'] = df['clock'].apply(lambda x: x['displayValue']).astype(str)
+    df['scoringPlay'] = df['scoringPlay'].fillna(False)
 
     return jsonify({'message': 'Hello from the endpoint'}), 200
 

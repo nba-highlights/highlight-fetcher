@@ -2,4 +2,4 @@ flask
 requests
 beautifulsoup4
 boto3
-selenium
+pandas
