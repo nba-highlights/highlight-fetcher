@@ -1,5 +1,5 @@
 """Script for starting the Highlight Fetcher server."""
-
+import datetime
 import json
 import logging
 
@@ -152,6 +152,31 @@ def fetch_highlights():
                 app.logger.warning(f"Could not send item {play} to DynamoDB table {table_name}.", exc_info=e)
 
     app.logger.info(f"Sent {num_sent} items to DynamoDB.")
+
+    eventbridge_client = boto3.client('events', region_name='eu-north-1')
+    event_data = {
+        "game-id": game_id,
+        "num-plays": num_sent,
+        "time": datetime.UTC
+    }
+    app.logger.info(f"Emitting event with data: {event_data}.")
+    # PutEvents request to send the custom event
+
+    try:
+        response = eventbridge_client.put_events(
+            Entries=[
+                {
+                    'Source': "highlight-fetcher",
+                    'DetailType': "PlaysAddedToDynamoDbEvent",
+                    'Detail': json.dumps(event_data),
+                    'EventBusName': 'default'  # Replace with your EventBridge EventBusName
+                }
+            ]
+        )
+        app.logger.info(f"Event successfully emitted.")
+    except Exception as e:
+        app.logger.warning(f"Could not emit event.", exc_info=e)
+
     return jsonify({'message': 'Hello from the endpoint'}), 200
 
 
