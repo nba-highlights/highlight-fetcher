@@ -74,7 +74,7 @@ def health_check():
     return jsonify({"message": "Health Check OK"}), 200
 
 
-@app.route('/fetch-highlights', methods=['GET'])
+@app.route('/fetch-highlights', methods=['POST'])
 def fetch_highlights():
     request_data = request.data.decode('utf-8')
 
@@ -88,7 +88,9 @@ def fetch_highlights():
     if request.headers.get('x-amz-sns-message-type') == 'SubscriptionConfirmation':
         return confirm_subscription(request.headers, data)
 
-    game_id = request.args.get('game-id')
+    app.logger.info(f"Extracting request data: {request_data}.")
+    data = json.loads(request_data)
+    game_id = data['game-id']
 
     url = f"https://www.espn.com/nba/playbyplay/_/gameId/{game_id}"
 
@@ -139,14 +141,17 @@ def fetch_highlights():
     dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(table_name)
 
-    app.logger.info(f"Sending {len(plays)} to DynamoDB.")
+    app.logger.info(f"Sending {len(plays)} items to DynamoDB.")
+    num_sent = 0
     with table.batch_writer() as batch:
         for play in plays:
             try:
                 response = batch.put_item(Item=play)
+                num_sent += 1
             except Exception as e:
                 app.logger.warning(f"Could not send item {play} to DynamoDB table {table_name}.", exc_info=e)
 
+    app.logger.info(f"Sent {num_sent} items to DynamoDB.")
     return jsonify({'message': 'Hello from the endpoint'}), 200
 
 
