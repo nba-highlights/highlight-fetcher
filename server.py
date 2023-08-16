@@ -114,22 +114,24 @@ def fetch_highlights():
     df['secondsPassed'] = df.apply(seconds_passed, axis=1)
 
     primary_key_name = "game-id"
-    sort_key_name = "seconds"
+    sort_key_name = "id"
 
     period_name = "period"
     text_name = "text"
     home_away_name = "venue"
     clock_name = "clock"
+    seconds_name = "seconds"
     scoring_play_name = "scoring-play"
 
     app.logger.info(f"Creating {df.shape[0]} items to be sent to Dynamo DB.")
     plays = []
     for id, period, text, home_away, clock, scoring_play, second in zip(df.id, df.period, df.text, df.homeAway, df.clock, df.scoringPlay, df.secondsPassed):
         dynamo_db_item = {
-            primary_key_name: id,
-            sort_key_name: second,
+            primary_key_name: game_id,
+            sort_key_name: id,
             period_name: period,
             text_name: text,
+            seconds_name: second,
             home_away_name: home_away,
             clock_name: clock,
             scoring_play_name: scoring_play
