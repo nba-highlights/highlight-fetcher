@@ -1,6 +1,7 @@
 """Script for starting the Highlight Fetcher server."""
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 import pandas as pd
@@ -11,6 +12,12 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 app.logger.setLevel(logging.DEBUG)  # Set the logging level to debug
 
+
+# the executor pool used by the splitting endpoint
+executor = ThreadPoolExecutor(2)
+
+# the futures store. If a game is currently being processed, it will be stored here in the meantime.
+futures = {}
 
 def confirm_subscription(request_header, request_data):
     """Confirms the SNS subscription."""
@@ -97,9 +104,21 @@ def fetch_highlights():
     else:
         return jsonify({'message': f'Method {request.method} not allowed.'}), 400
 
+    if game_id in futures:
+        if not futures[game_id].done():
+            app.logger.info(f"The game {game_id} is already being processed.")
+            return jsonify({"message": "Game is already being processed."}), 200
+        else:
+            app.logger.info(f"The game {game_id} finished processing.")
+            del futures[game_id]
+
+    app.logger.info(f"Starting process for fetching Game: {game_id}.")
+
+    future = executor.submit(_fetch_highlights, game_id)
+    futures[game_id] = future
     _fetch_highlights(game_id)
 
-    return jsonify({'message': 'Hello from the endpoint'}), 200
+    return jsonify({'message': f'Starting to fetch highlights for game: {game_id}'}), 200
 
 
 def _fetch_highlights(game_id):
