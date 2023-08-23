@@ -116,7 +116,6 @@ def fetch_highlights():
 
     future = executor.submit(_fetch_highlights, game_id)
     futures[game_id] = future
-    _fetch_highlights(game_id)
 
     return jsonify({'message': f'Starting to fetch highlights for game: {game_id}'}), 200
 
