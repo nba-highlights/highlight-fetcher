@@ -104,6 +104,7 @@ def fetch_highlights():
     else:
         return jsonify({'message': f'Method {request.method} not allowed.'}), 400
 
+    """
     if game_id in futures:
         if not futures[game_id].done():
             app.logger.info(f"The game {game_id} is already being processed.")
@@ -111,11 +112,11 @@ def fetch_highlights():
         else:
             app.logger.info(f"The game {game_id} finished processing.")
             del futures[game_id]
-
+    """
     app.logger.info(f"Starting process for fetching Game: {game_id}.")
 
     future = executor.submit(_fetch_highlights, game_id)
-    futures[game_id] = future
+    #futures[game_id] = future
 
     return jsonify({'message': f'Starting to fetch highlights for game: {game_id}'}), 200
 
