@@ -55,8 +55,11 @@ def get_soup(url: str):
     :return
         (BeautifulSoup) a BeautifulSoup object of the provided URL.
     """
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (iPad; CPU OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) '
+                      'Mobile/15E148'}
 
-    page = requests.get(url, headers={'User-agent': 'your bot 0.1'})
+    page = requests.get(url, headers=headers)
     soup = BeautifulSoup(page.text, 'html.parser')
     return soup
 
