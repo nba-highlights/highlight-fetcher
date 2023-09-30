@@ -119,10 +119,11 @@ def fetch_highlights():
     """
     app.logger.info(f"Starting process for fetching Game: {game_id}.")
 
-    future = executor.submit(_fetch_highlights, game_id)
+    _fetch_highlights(game_id)
+    #future = executor.submit(_fetch_highlights, game_id)
     #futures[game_id] = future
 
-    return jsonify({'message': f'Starting to fetch highlights for game: {game_id}'}), 200
+    return jsonify({'message': f'Fetched highlights for game: {game_id}'}), 200
 
 
 def _fetch_highlights(game_id):
