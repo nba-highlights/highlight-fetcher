@@ -119,11 +119,11 @@ def fetch_highlights():
     """
     app.logger.info(f"Starting process for fetching Game: {game_id}.")
 
-    _fetch_highlights(game_id)
+    return _fetch_highlights(game_id).to_json(), 200
     #future = executor.submit(_fetch_highlights, game_id)
     #futures[game_id] = future
 
-    return jsonify({'message': f'Fetched highlights for game: {game_id}'}), 200
+    #return jsonify({'message': f'Fetched highlights for game: {game_id}'}), 200
 
 
 def _fetch_highlights(game_id):
@@ -152,6 +152,7 @@ def _fetch_highlights(game_id):
     clock_name = "clock"
     seconds_name = "seconds"
     scoring_play_name = "scoring-play"
+    return df
     app.logger.info(f"Creating {df.shape[0]} items to be sent to Dynamo DB.")
     plays = []
     for id, period, text, home_away, clock, scoring_play, second in zip(df.id, df.period, df.text, df.homeAway,
