@@ -60,6 +60,7 @@ def get_soup(url: str):
                       'Mobile/15E148'}
 
     page = requests.get(url, headers=headers)
+    app.logger.info(f"Status code: {page.status_code}")
     soup = BeautifulSoup(page.text, 'html.parser')
     return soup
 
